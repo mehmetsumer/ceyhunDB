@@ -36,6 +36,13 @@
       $this -> sql .= ' LIMIT '.$start.', '.$finish;
       return $this;
     }
+    
+    function count($column, $table, $extra = NULL){
+
+      global $db;
+
+      return $count = $db -> query(htmlspecialchars("SELECT COUNT({$column}) as total FROM {$table} {$extra}")) -> fetch(PDO::FETCH_ASSOC)['total'];
+    }
 
     function select_dml($table, $size, $extra = NULL){
 
