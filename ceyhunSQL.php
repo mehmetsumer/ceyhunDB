@@ -1,19 +1,44 @@
 <?php
   class sqlStatements{
 
-    private $sql;
-
     function __construct(){
       $this -> sql = "";
     }
 
-    function select($column){
-      $this -> sql .= 'SELECT '.$column.' FROM ';
+    function host($host){
+      $this -> sql .= 'mysql:host='.$host;
       return $this;
     }
 
+    function dbname($dbname){
+      $this -> sql .= ';dbname='.$dbname;
+      return $this;
+    }
+
+    function database($user, $pass){
+      try {
+        $db = new PDO($this -> sql, $user, $pass);
+        $db -> exec("SET NAMES 'utf8'; SET CHARSET 'utf8'");
+
+        $this -> sql = "";
+
+        return $db;
+      } catch (PDOException $e) {
+        echo 'SQL Exception -> '.$e;
+      }
+    }
+
+    function select($column){
+      $this -> sql .= 'SELECT '.$column.' ';
+      return $this;
+    }
+
+    function as($title){
+      $this -> sql.= 'as '.$title.' ';
+    }
+
     function from($table){
-      $this -> sql .= $table;
+      $this -> sql .= 'FROM '.$table;
       return $this;
     }
 
@@ -36,32 +61,36 @@
       $this -> sql .= ' LIMIT '.$start.', '.$finish;
       return $this;
     }
-    
-    function count($column, $table, $extra = NULL){
 
+    function fetch(){
       global $db;
 
-      return $count = $db -> query(htmlspecialchars("SELECT COUNT({$column}) as total FROM {$table} {$extra}")) -> fetch(PDO::FETCH_ASSOC)['total'];
+      $sql = $this -> sql;
+      $this -> sql = "";
+
+      return $db -> query(htmlspecialchars($sql)) -> fetch(PDO::FETCH_ASSOC);
     }
 
-    function select_dml($table, $size, $extra = NULL){
-
+    function fetchAll(){
       global $db;
 
-      if($size == 'fetch')
-        return $select = $db -> query(htmlspecialchars("SELECT * FROM {$table} {$extra}")) -> fetch(PDO::FETCH_ASSOC);
-      if($size == 'fetchall')
-       return $select = $db -> query(htmlspecialchars("SELECT * FROM {$table} {$extra}")) -> fetchAll(PDO::FETCH_ASSOC);
+      $sql = $this -> sql;
+      $this -> sql = "";
 
+      return $db -> query(htmlspecialchars($sql)) -> fetchAll(PDO::FETCH_ASSOC);
     }
 
-    function insert_dml($table, $data){
+    function insert($table, $data){
 
       global $db;
+
+      $datas = [];
 
       foreach ($data as $key => $value) {
         $column .= $key.',';
         $values .= '?,';
+
+        array_push($datas, $value);
       }
 
       $column = trim($column, ',');
@@ -69,67 +98,64 @@
 
       $prepare = $db -> prepare(htmlspecialchars('INSERT INTO '.$table.'('.$column.') VALUES('.$values.')'));
 
-      $datas = [];
-      foreach ($data as $key => $value) array_push($datas, $value);
-
       for ($i=0; $i < count($datas); $i++)$prepare -> bindParam($i + 1, $datas[$i], PDO::PARAM_STR);
 
       $prepare -> execute();
 
     }
 
-    function update_dml($table, $data, $extra = NULL){
+    function delete($table){
+      $this -> sql .= 'DELETE FROM '.$table;
+      return $this;
+    }
 
+    function query(){
       global $db;
 
-      foreach ($data as $key => $value) $column .= $key.' = ?, ';
+      $sql = $this -> sql;
+      $this -> sql = "";
+
+      $query = $db -> query(htmlspecialchars($sql));
+
+      $query -> execute();
+    }
+
+    function update($table, $set){
+      global $db;
+
+      $datas = [];
+
+      foreach ($set as $key => $value) {
+        $column .= $key.' = ?, ';
+        array_push($datas, $value);
+      }
 
       $column = trim($column, ', ');
 
-      $prepare = $db -> prepare(htmlspecialchars('UPDATE '.$table.' SET '.$column.' '.$extra));
+      $sql = 'UPDATE '.$table.' SET '.$column.($this -> sql);
+      $this -> sql = "";
 
-      $datas = [];
-      foreach ($data as $key => $value) array_push($datas, $value);
+      $prepare = $db -> prepare(htmlspecialchars($sql));
 
-      for ($i=0; $i < count($datas); $i++) $prepare -> bindParam($i + 1, $datas[$i], PDO::PARAM_STR);
+      for ($i=0; $i < count($datas); $i++)
+        $prepare -> bindParam($i + 1, $datas[$i], PDO::PARAM_STR);
 
       $prepare -> execute();
-
     }
 
-    function delete_dml($table, $extra){
-
+    function count($as){
       global $db;
 
-      $query = $db -> query(htmlspecialchars('DELETE FROM '.$table.' '.$extra));
-
-      $query -> execute();
-
-    }
-
-    function clear(){
+      $sql = $this -> sql;
       $this -> sql = "";
-      return $this -> sql;
+
+      return $db -> query(htmlspecialchars($sql)) -> fetch(PDO::FETCH_ASSOC)[$as];
     }
 
     function all(){
       return $this -> sql;
     }
 
-    function database($host, $name, $user, $pass){
-      try {
-        $db = new PDO(
-            'mysql:host='.$host.
-            ';dbname='.$name,
-            $user,
-            $pass
-          );
-        $db -> exec("SET NAMES 'utf8'; SET CHARSET 'utf8'");
-        return $db;
-      } catch (PDOException $e) {
-        echo 'SQL Exception';
-      }
-    }
-
   }
-?>
+
+ ?>
