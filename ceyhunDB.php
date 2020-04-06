@@ -10,7 +10,8 @@
       return $this;
     }
 
-    function dbname($dbname){
+    function dbname($dbname){ // A MESSAGE FROM MEHMET FOKING SUMER
+                              // BY ORDER OF THE PEAKY FOKING BLINDERS
       $this -> sql .= ';dbname='.$dbname;
       return $this;
     }
